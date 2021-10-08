@@ -24,7 +24,7 @@ def GaussLobattoQuadrature(num_points, a, b):
     roots = (b-a)/2 * (roots+1) + a
     return roots, weights
 
-def Integrate(f, a, b, roots = None, weights = None):
+def Integrate1D(f, a, b, roots = None, weights = None):
     '''
     Integrates a function f over [a, b] using the given roots and weights
     Parameters:

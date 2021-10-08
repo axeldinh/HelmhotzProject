@@ -5,7 +5,7 @@ import quadrature_rules
 import unittest
 import numpy as np
 
-class Test_Integrate(unittest.TestCase):
+class Test_Integrate1D(unittest.TestCase):
 
     def test_poly(self):
 
