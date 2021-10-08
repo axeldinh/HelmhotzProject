@@ -76,8 +76,8 @@ def compute_laplacian(u, inputs):
         if len(x.size()) > 2 and x.size(1) > 1:
             raise ValueError(f"x is a {len(x.size())}D Tensor, please choose a 1D Tensor. x has size {x.size()}")
 
-    if len(u.size()) > 3:
-        raise ValueError(f"u is a 3D Tensor, please choose a 2D Tensor (u should return a scalar per point). u has size {u.size()}")
+    if len(u.size()) > 2 and u.size(1) > 1:
+        raise ValueError(f"u is a {len(u.size())}D Tensor, please choose a 2D Tensor (u should return a scalar per point). u has size {u.size()}")
 
     if len(u.size()) > 1:
         if u.size(1) > 1:
