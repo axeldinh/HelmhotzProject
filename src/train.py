@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import torch
 
 def train(vpinn, optimizer, num_iter):
     t = tqdm(range(num_iter))
