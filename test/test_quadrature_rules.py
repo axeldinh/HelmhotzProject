@@ -29,5 +29,42 @@ class Test_Integrate1D(unittest.TestCase):
         expected = np.exp(1) - np.exp(-3)
         self.assertAlmostEqual(integral, expected, msg=f"Wrong measure in integral, should be {expected} but is {integral}")
 
+class Test_Integrate2D(unittest.TestCase):
+
+    def test_poly(self):
+
+        num_points = 6
+        a, b = -2, 2
+        c, d = 3, 4
+        f = lambda x, y: x**2 * y**3
+        X, Y, weights_X, weights_Y = quadrature_rules.GaussLobattoQuadrature2D(num_points, a, b, c, d)
+        integral = quadrature_rules.Integrate2D(f, a, b, c, d, X, weights_X, Y, weights_Y)
+        expected = 700/3
+        self.assertAlmostEqual(integral, expected, msg=f"Wrong measure in integral, should be {expected} but is {integral}")
+
+    def test_list(self):
+
+        num_points = 6
+        a, b = -2, 2
+        c, d = 3, 4
+        f = lambda x, y: x**2 * y**3
+        X, Y, weights_X, weights_Y = quadrature_rules.GaussLobattoQuadrature2D(num_points, a, b, c, d)
+        f = f(X, Y).tolist()
+        integral = quadrature_rules.Integrate2D(f, a, b, c, d, X, weights_X, Y, weights_Y)
+        expected = 700/3
+        self.assertAlmostEqual(integral, expected, msg=f"Wrong measure in integral, should be {expected} but is {integral}")
+
+    def test_exp(self):
+
+        num_points = 20
+        a, b = -2, 2
+        c, d = 3, 4
+        f = lambda x, y: np.exp(x) * y**2
+        X, Y, weights_X, weights_Y = quadrature_rules.GaussLobattoQuadrature2D(num_points, a, b, c, d)
+        f = f(X, Y).tolist()
+        integral = quadrature_rules.Integrate2D(f, a, b, c, d, X, weights_X, Y, weights_Y)
+        expected = 74 * np.sinh(2) / 3
+        self.assertAlmostEqual(integral, expected, msg=f"Wrong measure in integral, should be {expected} but is {integral}")
+
 if __name__=="__main__":
     unittest.main()

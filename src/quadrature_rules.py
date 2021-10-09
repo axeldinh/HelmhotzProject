@@ -21,8 +21,8 @@ def GaussLobattoQuadrature1D(num_points, a, b):
     weights = np.concatenate([np.array([2/(num_points*(num_points-1))]),
                              weights,
                              np.array([2/(num_points*(num_points-1))])])
-    roots = (b-a)/2 * (roots+1) + a
-    return roots, weights
+    X = (b-a)/2 * (roots+1) + a
+    return X, weights
 
 def GaussLobattoQuadrature2D(num_points_per_dim, a, b, c, d):
     '''
@@ -34,11 +34,11 @@ def GaussLobattoQuadrature2D(num_points_per_dim, a, b, c, d):
     roots_Y, weights_Y = GaussLobattoQuadrature1D(num_points_per_dim, c, d)
 
     X, Y = np.meshgrid(roots_X, roots_Y)
-    weights_X, weights_Y = np.meshgrid(weights_X, weights_X)
+    weights_X, weights_Y = np.meshgrid(weights_X, weights_Y)
 
-    return roots_X, roots_Y, weights_X, weights_Y
+    return X, Y, weights_X, weights_Y
 
-def Integrate1D(f, a, b, roots = None, weights = None):
+def Integrate1D(f, a, b, X = None, weights = None):
     '''
     Integrates a function f over [a, b] using the given roots and weights
     Parameters:
@@ -57,13 +57,13 @@ def Integrate1D(f, a, b, roots = None, weights = None):
     if type(weights).__name__ != "ndarray":
         weights = np.array(weights)
 
-    if roots is not None and type(roots).__name__ != "ndarray":
-        roots = np.array(roots)
+    if X is not None and type(X).__name__ != "ndarray":
+        X = np.array(X)
         
     if type(f).__name__ == 'function':
-        if roots is None:
+        if X is None:
             raise ValueError("f is a function handle but no values were provided for evaluation (roots = None)")
-        values = f(roots)
+        values = f(X)
     elif type(f).__name__ != "ndarray":
         values = np.array(f)
     else:
@@ -73,8 +73,8 @@ def Integrate1D(f, a, b, roots = None, weights = None):
     
     return integral
 
-def Integrate2D(f, a, b, c, d, roots_X = None,
-                weights_X = None, roots_Y = None,
+def Integrate2D(f, a, b, c, d, X = None,
+                weights_X = None, Y = None,
                 weights_Y = None):
     '''
     Integrates a function f over [a, b]*[c,d] using the given roots and weights
@@ -96,22 +96,24 @@ def Integrate2D(f, a, b, c, d, roots_X = None,
         raise ValueError("No quadrature weights provided (weights = None)")
 
     # First we convert everything to numpy arrays:
-    if roots_X is not None and type(roots_X).__name__ != "ndarray":
-        roots_X = np.array(roots_X)
-    if roots_Y is not None and type(roots_Y).__name__ != "ndarray":
-        roots_Y = np.array(roots_X)
+    if X is not None and type(X).__name__ != "ndarray":
+        X = np.array(X)
+    if Y is not None and type(Y).__name__ != "ndarray":
+        Y = np.array(Y)
     if type(weights_X).__name__ != "ndarray":
-        weights_X = np.array(roots_X)
+        weights_X = np.array(weights_X)
     if type(weights_Y).__name__ != "ndarray":
-        weights_Y = np.array(roots_X)
+        weights_Y = np.array(weights_Y)
         
     if type(f).__name__ == 'function':
-        if roots_X is None or roots_Y is None:
+        if X is None or Y is None:
             raise ValueError("f is a function handle but no values were provided for evaluation (roots = None)")
-        values = f(roots_X, roots_Y)
+        values = f(X, Y)
     elif type(f).__name__ != "ndarray":
         values = np.array(f)
     else:
         values = f
 
     integral = (b-a) * (d-c) * np.sum(values * weights_X * weights_Y) / 4
+
+    return integral
