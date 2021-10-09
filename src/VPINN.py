@@ -54,8 +54,8 @@ class VPINN(nn.Module):
         for k in range(1, num_test_functions+1):
             self.test_functions[k-1] = torch.sin(np.pi*k*self.x.view(-1))
             self.dtest_functions[k-1] = td.compute_derivative(self.test_functions[k-1],
-                                                              self.x, retain_graph = True).flatten()
-            self.d2test_functions[k-1] = td.compute_laplacian(self.test_functions[k-1], [self.x], retain_graph=True)
+                                                              self.x, retain_graph = True).view(-1)
+            self.d2test_functions[k-1] = td.compute_laplacian(self.test_functions[k-1], [self.x], retain_graph=True).view(-1)
             
         self.source = source_function(self.x).view(-1)
         
@@ -81,7 +81,7 @@ class VPINN(nn.Module):
     
     def compute_Rk_NL(self, u, k):
         u_x = td.compute_derivative(u, self.x, retain_graph=True).view(-1)
-        return self.Integrate(u*u_x*self.test_functions[k])
+        return self.Integrate(u.view(-1)*u_x*self.test_functions[k])
     
     def compute_Rk1(self, u, k):
         u_xx = td.compute_laplacian(u, [self.x], retain_graph=True)
@@ -92,7 +92,7 @@ class VPINN(nn.Module):
         return self.Integrate(u_x * self.dtest_functions[k])
     
     def compute_Rk3(self, u, k):
-        return -self.Integrate(u * self.d2test_functions[k]) + \
+        return -self.Integrate(u.view(-1) * self.d2test_functions[k]) + \
                 self.u_right*self.dtest_functions[k][-1] - self.u_left*self.dtest_functions[k][0]
     
     def compute_Rk(self, u, k, method = 1):
@@ -103,7 +103,7 @@ class VPINN(nn.Module):
         self.u = self.model(self.x)
         loss_interior = 0
         for k in range(self.num_test_functions):
-            Rk = self.compute_Rk(self.u, k)
+            Rk = self.compute_Rk(self.u, k, method)
             loss_interior += (Rk - self.compute_Fk(k))**2
         loss_interior /= self.num_test_functions
         self.losses_interior.append(loss_interior.item())
@@ -126,9 +126,9 @@ class VPINN_Laplace_Dirichlet(VPINN):
 
     def compute_Rk(self, u, k, method = 1):
             
-        if method == 1: Rk = self.compute_Rk1(self.u, k)
-        elif method == 2: Rk = self.compute_Rk2(self.u, k)
-        elif method == 3: Rk = self.compute_Rk3(self.u, k)
+        if method == 1: Rk = self.compute_Rk1(u, k)
+        elif method == 2: Rk = self.compute_Rk2(u, k)
+        elif method == 3: Rk = self.compute_Rk3(u, k)
             
         return Rk
 
@@ -144,9 +144,9 @@ class VPINN_SteadyBurger_Dirichlet(VPINN):
 
     def compute_Rk(self, u, k, method = 1):
             
-        if method == 1: Rk = self.compute_Rk1(self.u, k)
-        elif method == 2: Rk = self.compute_Rk2(self.u, k)
-        elif method == 3: Rk = self.compute_Rk3(self.u, k)
+        if method == 1: Rk = self.compute_Rk1(u, k)
+        elif method == 2: Rk = self.compute_Rk2(u, k)
+        elif method == 3: Rk = self.compute_Rk3(u, k)
             
         Rk += self.compute_Rk_NL(u, k)
         
