@@ -1,5 +1,6 @@
 from scipy.special import legendre, roots_jacobi, jacobi, gamma
 import numpy as np
+import torch
 
 
 # GAUSS-LOBATTO-LEGENDRE QUADRATURE
@@ -113,22 +114,22 @@ def Integrate1D(f, a, b, X = None, weights = None):
     if weights is None:
         raise ValueError("No quadrature weights provided (weights = None)")
 
-    if type(weights).__name__ != "ndarray":
-        weights = np.array(weights)
+    if type(weights).__name__ != "ndarray" and type(weights).__name__ != "Tensor":
+        weights = torch.Tensor(weights)
 
-    if X is not None and type(X).__name__ != "ndarray":
-        X = np.array(X)
+    if X is not None and type(X).__name__ != "ndarray" and type(X).__name__ != "Tensor":
+        X = torch.Tensor(X)
         
     if type(f).__name__ == 'function':
         if X is None:
             raise ValueError("f is a function handle but no values were provided for evaluation (roots = None)")
         values = f(X)
-    elif type(f).__name__ != "ndarray":
-        values = np.array(f)
+    elif type(f).__name__ != "ndarray" and type(f).__name__ != "Tensor":
+        values = torch.Tensor(f)
     else:
         values = f
         
-    integral = (b-a) * np.sum(values*weights) / 2
+    integral = (b-a) * torch.sum(values*weights) / 2
     
     return integral
 
@@ -155,24 +156,24 @@ def Integrate2D(f, a, b, c, d, X = None,
         raise ValueError("No quadrature weights provided (weights = None)")
 
     # First we convert everything to numpy arrays:
-    if X is not None and type(X).__name__ != "ndarray":
-        X = np.array(X)
-    if Y is not None and type(Y).__name__ != "ndarray":
-        Y = np.array(Y)
-    if type(weights_X).__name__ != "ndarray":
-        weights_X = np.array(weights_X)
-    if type(weights_Y).__name__ != "ndarray":
-        weights_Y = np.array(weights_Y)
+    if X is not None and type(X).__name__ != "ndarray" and type(X).__name__ != "Tensor":
+        X = torch.Tensor(X)
+    if Y is not None and type(Y).__name__ != "ndarray" and type(Y).__name != "Tensor":
+        Y = torch.Tensor(Y)
+    if type(weights_X).__name__ != "ndarray" and type(weights_X).__name__ != "Tensor":
+        weights_X = torch.Tensor(weights_X)
+    if type(weights_Y).__name__ != "ndarray" and type(weights_Y).__name__ != "Tensor":
+        weights_Y = torch.Tensor(weights_Y)
         
     if type(f).__name__ == 'function':
         if X is None or Y is None:
             raise ValueError("f is a function handle but no values were provided for evaluation (roots = None)")
         values = f(X, Y)
-    elif type(f).__name__ != "ndarray":
-        values = np.array(f)
+    elif type(f).__name__ != "ndarray" and type(f).__name__ != "Tensor":
+        values = torch.Tensor(f)
     else:
         values = f
 
-    integral = (b-a) * (d-c) * np.sum(values * weights_X * weights_Y) / 4
+    integral = (b-a) * (d-c) * torch.sum(values * weights_X * weights_Y) / 4
 
     return integral
