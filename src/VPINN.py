@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import numpy as np
+
 import torch_derivatives as td
 import quadrature_rules as qr
 
@@ -9,6 +11,7 @@ class MLP(nn.Module):
         
         super().__init__()
         
+        self.activation = activation
         self.linears = nn.ModuleList([nn.Linear(layers[i], layers[i+1], dtype = torch.double)
                                       for i in range(len(layers)-1)])
         
@@ -17,7 +20,7 @@ class MLP(nn.Module):
         for i, lin in enumerate(self.linears):
             x = lin(x)
             if i < len(self.linears)-1:
-                x = activation(x)
+                x = self.activation(x)
                 
         return x
 
