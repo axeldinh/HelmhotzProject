@@ -34,8 +34,8 @@ def GaussLobattoLegendreQuadrature2D(num_points_per_dim, a, b, c, d):
     This method is accurate for polynomials up to degree 2num_points-3 in 1D.
     '''
 
-    roots_X, weights_X = GaussLobattoQuadrature1D(num_points_per_dim, a, b)
-    roots_Y, weights_Y = GaussLobattoQuadrature1D(num_points_per_dim, c, d)
+    roots_X, weights_X = GaussLobattoLegendreQuadrature1D(num_points_per_dim, a, b)
+    roots_Y, weights_Y = GaussLobattoLegendreQuadrature1D(num_points_per_dim, c, d)
 
     X, Y = np.meshgrid(roots_X, roots_Y)
     weights_X, weights_Y = np.meshgrid(weights_X, weights_Y)
@@ -72,12 +72,27 @@ def GaussLobattoJacobiWeights(Q: int, alpha = 0,beta = 0):
     X = np.append(-1 , X)    
     return [X, W]
 
-def GaussLobattoJacobiQuadrature1D(num_points, a, b):
+def GaussLobattoJacobiQuadrature1D(num_points, a, b, alpha = 0, beta = 0):
 
-    roots, weights = GaussLobattoJacobiWeights(num_points)
+    roots, weights = GaussLobattoJacobiWeights(num_points, alpha, beta)
     X = (b-a)/2 * (roots+1) + a
 
     return X, weights
+
+def GaussLobattoJacobiQuadrature2D(num_points_per_dim, a, b, c, d,
+                                   alpha_x = 0, beta_x = 0, alpha_y = 0, beta_y = 0):
+    '''
+    Returns the num_points points and weights of the Gauss-Lobatto-Jacobi quadrature over [a,b]*[c,d].
+    This method is accurate for polynomials up to degree 2num_points-3 in 1D.
+    '''
+
+    roots_X, weights_X = GaussLobattoJacobiQuadrature1D(num_points_per_dim, a, b, alpha_x, beta_x)
+    roots_Y, weights_Y = GaussLobattoJacobiQuadrature1D(num_points_per_dim, c, d, alpha_y, beta_y)
+
+    X, Y = np.meshgrid(roots_X, roots_Y)
+    weights_X, weights_Y = np.meshgrid(weights_X, weights_Y)
+
+    return X, Y, weights_X, weights_Y
 
 # INTEGRATION ALGORITHMS
 ##################################################
