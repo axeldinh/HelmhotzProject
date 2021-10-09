@@ -24,11 +24,14 @@ class MLP(nn.Module):
                 
         return x
 
+# VPINNs
+##################################################
+
 class VPINN(nn.Module):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation):
+                 layers, activation, u_handle = None):
         
         super().__init__()
         
@@ -56,14 +59,19 @@ class VPINN(nn.Module):
             
         self.source = source_function(self.x).view(-1)
         
-        self.model = MLP(layers, activation)
+        if u_handle is not None:
+            self.model = u_handle
+        else:
+            self.model = MLP(layers, activation)
         self.u = None
         
         self.losses_interior = []
         self.losses_boundary = []
-        self.grad_parameters = {}
-        for n, p in self.model.named_parameters():
-            self.grad_parameters[n] = []
+
+        if type(self.model).__name__ != "function":
+            self.grad_parameters = {}
+            for n, p in self.model.named_parameters():
+                self.grad_parameters[n] = []
         
     def Integrate(self, f):
         return qr.Integrate1D(f, self.a, self.b, self.x, self.weights)
@@ -110,11 +118,11 @@ class VPINN_Laplace_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation):
+                 layers, activation, u_ex = None):
         
         super().__init__(a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation)
+                 layers, activation, u_ex)
 
     def compute_Rk(self, u, k, method = 1):
             
@@ -124,16 +132,15 @@ class VPINN_Laplace_Dirichlet(VPINN):
             
         return Rk
 
-
 class VPINN_SteadyBurger_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation):
+                 layers, activation, u_ex = None):
         
         super().__init__(a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation)
+                 layers, activation, u_ex)
 
     def compute_Rk(self, u, k, method = 1):
             
@@ -144,3 +151,91 @@ class VPINN_SteadyBurger_Dirichlet(VPINN):
         Rk += self.compute_Rk_NL(u, k)
         
         return Rk
+
+
+# PINNs
+##################################################
+
+class PINN(nn.Module):
+    
+    def __init__(self, a, b, u_left, u_right, source_function,
+                 num_points, boundary_penalty,
+                 layers, activation, u_ex = None):
+        
+        super().__init__()
+        
+        self.a, self.b = a, b
+        self.num_points = num_points
+        self.u_left, self.u_right = u_left, u_right
+        self.boundary_penalty = boundary_penalty
+        self.source_function = source_function
+        
+        # Set the quadrature points
+        self.x, _ = qr.GaussLobattoJacobiQuadrature1D(num_points, a, b)
+        self.x = torch.tensor(self.x, dtype = torch.double).view(-1,1)
+        self.x.requires_grad = True
+            
+        self.source = source_function(self.x).view(-1)
+        
+        if u_ex is not None:
+            self.model = u_ex
+        else:
+            self.model = MLP(layers, activation)
+        self.u = None
+        
+        self.losses_interior = []
+        self.losses_boundary = []
+        self.grad_parameters = {}
+
+        if type(self.model).__name__ != "function":
+            for n, p in self.model.named_parameters():
+                self.grad_parameters[n] = []
+    
+    def compute_R(self, u):
+        raise NotImplementedError
+    
+    def compute_loss(self, method = 1):
+        
+        self.u = self.model(self.x)
+        loss_interior = (self.compute_R(self.u) - self.source)**2
+        loss_interior = torch.mean(loss_interior)
+        self.losses_interior.append(loss_interior.item())
+            
+        loss_boundary = (self.u[0] - self.u_left)**2 + (self.u[-1] - self.u_right)**2
+        loss_boundary *= self.boundary_penalty / 2
+        self.losses_boundary.append(loss_boundary.item())
+        
+        return loss_interior, loss_boundary
+
+class PINN_SteadyBurger_Dirichlet(PINN):
+    
+    def __init__(self, a, b, u_left, u_right, source_function,
+                 num_points, boundary_penalty,
+                 layers, activation, u_ex = None):
+        
+        super().__init__(a, b, u_left, u_right, source_function,
+                 num_points, boundary_penalty,
+                 layers, activation, u_ex)
+    
+    def compute_R(self, u):
+        
+        u_x = td.compute_derivative(u, self.x, retain_graph=True).view(-1)
+        u_xx = td.compute_laplacian(u, [self.x], retain_graph = True).view(-1)
+        
+        return u.view(-1)*u_x - u_xx
+    
+class PINN_Laplace_Dirichlet(PINN):
+    
+    def __init__(self, a, b, u_left, u_right, source_function,
+                 num_points, boundary_penalty,
+                 layers, activation, u_ex = None):
+        
+        super().__init__(a, b, u_left, u_right, source_function,
+                 num_points, boundary_penalty,
+                 layers, activation, u_ex)
+    
+    def compute_R(self, u):
+        
+        u_xx = td.compute_laplacian(u, [self.x], retain_graph = True).view(-1)
+        
+        return - u_xx
