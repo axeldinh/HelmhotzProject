@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 def train(vpinn, optimizer, num_iter):
     t = tqdm(range(num_iter))
     last_loss = 0
