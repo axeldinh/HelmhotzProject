@@ -39,6 +39,7 @@ def compute_derivative(u, x, retain_graph = False, create_graph = False, allow_u
     u_x = torch.autograd.grad([u], inputs = x, grad_outputs=[grad],
                               retain_graph=retain_graph, create_graph=create_graph, allow_unused=allow_unused)[0]
     if u_x==None:
+        print("Warning: Derivative was None")
         u_x = torch.zeros(x.size())
     
     return u_x
