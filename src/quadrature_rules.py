@@ -128,8 +128,11 @@ def Integrate1D(f, a, b, X = None, weights = None):
         values = torch.Tensor(f)
     else:
         values = f
-        
-    integral = (b-a) * torch.sum(values*weights) / 2
+    
+    if  type(values).__name__ == 'Tensor':
+        integral = (b-a) * torch.sum(values*weights) / 2
+    else:
+        integral = (b-a) * np.sum(values*weights) / 2
     
     return integral
 
@@ -141,7 +144,7 @@ def Integrate2D(f, a, b, c, d, X = None,
     Parameters:
         f (iterable or function handle): if f is an array of the same size as weights,
                                          the integral is directly computed using summation.
-                                         Otherwise f is evaluated on thee roots before hand.
+                                         Otherwise f is evaluated on the roots before hand.
         a (float)                      : start of the interval on x
         b (float)                      : end of the interval on x
         c (float)                      : start of the interval on y
@@ -174,6 +177,9 @@ def Integrate2D(f, a, b, c, d, X = None,
     else:
         values = f
 
-    integral = (b-a) * (d-c) * torch.sum(values * weights_X * weights_Y) / 4
+    if type(values).__name__ == 'Tensor':
+        integral = (b-a) * (d-c) * torch.sum(values * weights_X * weights_Y) / 4
+    else:
+        integral = (b-a) * (d-c) * np.sum(values * weights_X * weights_Y) / 4
 
     return integral

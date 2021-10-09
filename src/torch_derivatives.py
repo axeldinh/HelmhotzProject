@@ -38,13 +38,14 @@ def compute_derivative(u, x, retain_graph = False, create_graph = False, allow_u
     grad = torch.ones(u.size())
     u_x = torch.autograd.grad([u], inputs = x, grad_outputs=[grad],
                               retain_graph=retain_graph, create_graph=create_graph, allow_unused=allow_unused)[0]
+    
+    # In case x was unused (e.g for 2nd derivative of u = x), we return the zero vector
     if u_x==None:
-        print("Warning: Derivative was None")
         u_x = torch.zeros(x.size())
     
     return u_x
 
-def compute_laplacian(u, inputs):
+def compute_laplacian(u, inputs, retain_graph = False, create_graph = False):
     '''
     Computes the Laplacian of u with respect to x. 
     E.g.: If u = [u1, u2, u3], and x = [[x11, x12], [x21, x22]],
@@ -70,9 +71,12 @@ def compute_laplacian(u, inputs):
     # CHECKS
     #########################################
 
+    if type(inputs).__name__ != 'list' and type(inputs).__name__ != 'tuple':
+        raise ValueError("Inputs should be a list or a tuple.")
+
     for x in inputs:
         if not x.requires_grad:
-            raise ValueError("x.requires_grad is set to False")
+            raise ValueError(f"x.requires_grad is set to False, got {[a.requires_grad for a in inputs]}")
             
         if len(x.size()) > 2 and x.size(1) > 1:
             raise ValueError(f"x is a {len(x.size())}D Tensor, please choose a 1D Tensor. x has size {x.size()}")
@@ -89,7 +93,7 @@ def compute_laplacian(u, inputs):
     for x in inputs:
         u_clone = u.clone()
         u_x = compute_derivative(u_clone, x, retain_graph=True, create_graph=True)
-        u_xx = compute_derivative(u_x, x, allow_unused=True)
+        u_xx = compute_derivative(u_x, x, retain_graph=retain_graph, create_graph=create_graph, allow_unused=True)
         lapl.append(u_xx.view(-1, 1))
         
     return torch.sum(torch.cat(lapl, dim = 1), dim = 1)
