@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import numpy as np
@@ -31,7 +32,7 @@ class VPINN(nn.Module):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation, u_handle = None):
+                 layers, activation, u_handle = None, u_ex = None):
         
         super().__init__()
         
@@ -64,13 +65,14 @@ class VPINN(nn.Module):
         else:
             self.model = MLP(layers, activation)
         self.u = None
+        self.u_ex = u_ex
         
         self.losses_interior = []
         self.losses_boundary = []
 
         if type(self.model).__name__ != "function":
             self.grad_parameters = {}
-            for n, p in self.model.named_parameters():
+            for n, _ in self.model.named_parameters():
                 self.grad_parameters[n] = []
         
     def Integrate(self, f):
@@ -113,6 +115,14 @@ class VPINN(nn.Module):
         self.losses_boundary.append(loss_boundary.item())
         
         return loss_interior, loss_boundary
+
+    def plot(self):
+        if self.u_ex:
+            plt.plot(self.x.detach().numpy(), self.u_ex(self.x).detach().numpy(), label="Exact", c = 'r')
+        plt.scatter(self.x.detach().numpy(), self.u.detach().numpy(), label="Approx", c = 'k', marker = "*", s = 20)
+        plt.grid()
+        plt.legend()
+        plt.show()
 
 class VPINN_Laplace_Dirichlet(VPINN):
     
