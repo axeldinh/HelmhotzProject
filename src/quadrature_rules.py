@@ -53,17 +53,65 @@ def Integrate1D(f, a, b, roots = None, weights = None):
     
     if weights is None:
         raise ValueError("No quadrature weights provided (weights = None)")
+
+    if type(weights).__name__ != "ndarray":
+        weights = np.array(weights)
+
+    if roots is not None and type(roots).__name__ != "ndarray":
+        roots = np.array(roots)
         
     if type(f).__name__ == 'function':
-        
         if roots is None:
             raise ValueError("f is a function handle but no values were provided for evaluation (roots = None)")
-        
-        xs = f(roots)
-        
+        values = f(roots)
+    elif type(f).__name__ != "ndarray":
+        values = np.array(f)
     else:
-        xs = f
+        values = f
         
-    integral = (b-a) * np.sum([x*w for x, w in zip(xs, weights)]) / 2
+    integral = (b-a) * np.sum(values*weights) / 2
     
     return integral
+
+def Integrate2D(f, a, b, c, d, roots_X = None,
+                weights_X = None, roots_Y = None,
+                weights_Y = None):
+    '''
+    Integrates a function f over [a, b]*[c,d] using the given roots and weights
+    Parameters:
+        f (iterable or function handle): if f is an array of the same size as weights,
+                                         the integral is directly computed using summation.
+                                         Otherwise f is evaluated on thee roots before hand.
+        a (float)                      : start of the interval on x
+        b (float)                      : end of the interval on x
+        c (float)                      : start of the interval on y
+        d (float)                      : end of the interval on y
+        roots_X (iterable)             : where the function needds to be evaluated (as accorded to the quadrature rule)
+        weights_X (iterable)           : weights for the quadrature
+        roots_Y (iterable)             : where the function needds to be evaluated (as accorded to the quadrature rule)
+        weights_Y (iterable)           : weights for the quadrature
+    '''
+    
+    if weights_X is None or weights_Y is None:
+        raise ValueError("No quadrature weights provided (weights = None)")
+
+    # First we convert everything to numpy arrays:
+    if roots_X is not None and type(roots_X).__name__ != "ndarray":
+        roots_X = np.array(roots_X)
+    if roots_Y is not None and type(roots_Y).__name__ != "ndarray":
+        roots_Y = np.array(roots_X)
+    if type(weights_X).__name__ != "ndarray":
+        weights_X = np.array(roots_X)
+    if type(weights_Y).__name__ != "ndarray":
+        weights_Y = np.array(roots_X)
+        
+    if type(f).__name__ == 'function':
+        if roots_X is None or roots_Y is None:
+            raise ValueError("f is a function handle but no values were provided for evaluation (roots = None)")
+        values = f(roots_X, roots_Y)
+    elif type(f).__name__ != "ndarray":
+        values = np.array(f)
+    else:
+        values = f
+
+    integral = (b-a) * (d-c) * np.sum(values * weights_X * weights_Y) / 4
