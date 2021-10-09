@@ -1,7 +1,11 @@
-from scipy.special import legendre
+from scipy.special import legendre, roots_jacobi, jacobi, gamma
 import numpy as np
 
-def GaussLobattoQuadrature1D(num_points, a, b):
+
+# GAUSS-LOBATTO-LEGENDRE QUADRATURE
+##################################################
+
+def GaussLobattoLegendreQuadrature1D(num_points, a, b):
     '''
     Returns the num_points points and weights of the Gauss-Lobatto quadrature over [a,b].
     This method is accurate for polynomials up to degree 2num_points-3
@@ -24,7 +28,7 @@ def GaussLobattoQuadrature1D(num_points, a, b):
     X = (b-a)/2 * (roots+1) + a
     return X, weights
 
-def GaussLobattoQuadrature2D(num_points_per_dim, a, b, c, d):
+def GaussLobattoLegendreQuadrature2D(num_points_per_dim, a, b, c, d):
     '''
     Returns the num_points points and weights of the Gauss-Lobatto quadrature over [a,b]*[c,d].
     This method is accurate for polynomials up to degree 2num_points-3 in 1D.
@@ -37,6 +41,46 @@ def GaussLobattoQuadrature2D(num_points_per_dim, a, b, c, d):
     weights_X, weights_Y = np.meshgrid(weights_X, weights_Y)
 
     return X, Y, weights_X, weights_Y
+
+# GAUSS-LOBATTO-JACOBI QUADRATURE
+##################################################
+
+def Jacobi(n,alpha,beta,x):
+    '''
+    Recursive generation of the Jacobi polynomial of order n
+    '''
+    x=np.array(x)
+    return (jacobi(n,alpha,beta)(x))
+    
+def GaussLobattoJacobiWeights(Q: int, alpha = 0,beta = 0):
+    '''
+    Weight coefficients
+    '''
+    W = []
+    X = roots_jacobi(Q-2,alpha+1,beta+1)[0]
+    if alpha == 0 and beta==0:
+        W = 2/( (Q-1)*(Q)*(Jacobi(Q-1,0,0,X)**2) )
+        Wl = 2/( (Q-1)*(Q)*(Jacobi(Q-1,0,0,-1)**2) )
+        Wr = 2/( (Q-1)*(Q)*(Jacobi(Q-1,0,0,1)**2) )
+    else:
+        W = 2**(alpha+beta+1)*gamma(alpha+Q)*gamma(beta+Q)/( (Q-1)*gamma(Q)*gamma(alpha+beta+Q+1)*(Jacobi(Q-1,alpha,beta,X)**2) )
+        Wl = (beta+1)*2**(alpha+beta+1)*gamma(alpha+Q)*gamma(beta+Q)/( (Q-1)*gamma(Q)*gamma(alpha+beta+Q+1)*(Jacobi(Q-1,alpha,beta,-1)**2) )
+        Wr = (alpha+1)*2**(alpha+beta+1)*gamma(alpha+Q)*gamma(beta+Q)/( (Q-1)*gamma(Q)*gamma(alpha+beta+Q+1)*(Jacobi(Q-1,alpha,beta,1)**2) )
+    W = np.append(W , Wr)
+    W = np.append(Wl , W)
+    X = np.append(X , 1)
+    X = np.append(-1 , X)    
+    return [X, W]
+
+def GaussLobattoJacobiQuadrature1D(num_points, a, b):
+
+    roots, weights = GaussLobattoJacobiWeights(num_points)
+    X = (b-a)/2 * (roots+1) + a
+
+    return X, weights
+
+# INTEGRATION ALGORITHMS
+##################################################
 
 def Integrate1D(f, a, b, X = None, weights = None):
     '''
