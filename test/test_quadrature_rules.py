@@ -13,7 +13,7 @@ class Test_Integrate1D(unittest.TestCase):
         f = lambda x: x**(2*num_points-3)
         a = -1
         b = 3
-        roots, weights = quadrature_rules.GaussLobattoQuadrature(num_points, a, b)
+        roots, weights = quadrature_rules.GaussLobattoQuadrature1D(num_points, a, b)
         integral = quadrature_rules.Integrate1D(f, a, b, roots, weights)
         expected = (b**(2*num_points-2) - a**(2*num_points-2)) / (2*num_points-2)
         self.assertAlmostEqual(integral, expected, msg=f"Wrong measure in integral, should be {expected} but is {integral}")
@@ -24,7 +24,7 @@ class Test_Integrate1D(unittest.TestCase):
         f = lambda x: np.exp(-x)
         a = -1
         b = 3
-        roots, weights = quadrature_rules.GaussLobattoQuadrature(num_points, a, b)
+        roots, weights = quadrature_rules.GaussLobattoQuadrature1D(num_points, a, b)
         integral = quadrature_rules.Integrate1D(f, a, b, roots, weights)
         expected = np.exp(1) - np.exp(-3)
         self.assertAlmostEqual(integral, expected, msg=f"Wrong measure in integral, should be {expected} but is {integral}")

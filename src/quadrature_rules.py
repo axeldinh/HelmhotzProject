@@ -1,7 +1,7 @@
 from scipy.special import legendre
 import numpy as np
 
-def GaussLobattoQuadrature(num_points, a, b):
+def GaussLobattoQuadrature1D(num_points, a, b):
     '''
     Returns the num_points points and weights of the Gauss-Lobatto quadrature over [a,b].
     This method is accurate for polynomials up to degree 2num_points-3
@@ -23,6 +23,20 @@ def GaussLobattoQuadrature(num_points, a, b):
                              np.array([2/(num_points*(num_points-1))])])
     roots = (b-a)/2 * (roots+1) + a
     return roots, weights
+
+def GaussLobattoQuadrature2D(num_points_per_dim, a, b, c, d):
+    '''
+    Returns the num_points points and weights of the Gauss-Lobatto quadrature over [a,b]*[c,d].
+    This method is accurate for polynomials up to degree 2num_points-3 in 1D.
+    '''
+
+    roots_X, weights_X = GaussLobattoQuadrature1D(num_points_per_dim, a, b)
+    roots_Y, weights_Y = GaussLobattoQuadrature1D(num_points_per_dim, c, d)
+
+    X, Y = np.meshgrid(roots_X, roots_Y)
+    weights_X, weights_Y = np.meshgrid(weights_X, weights_X)
+
+    return roots_X, roots_Y, weights_X, weights_Y
 
 def Integrate1D(f, a, b, roots = None, weights = None):
     '''
