@@ -42,6 +42,8 @@ def compute_derivative(u, x, retain_graph = False, create_graph = False, allow_u
     # In case x was unused (e.g for 2nd derivative of u = x), we return the zero vector
     if u_x==None:
         u_x = torch.zeros(x.size())
+    if x.grad is not None:
+        x.grad.zero_()
     
     return u_x
 

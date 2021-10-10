@@ -8,20 +8,25 @@ import quadrature_rules as qr
 
 class MLP(nn.Module):
     
-    def __init__(self, layers, activation):
+    def __init__(self, layers, activation, bias = True, datas = None):
         
         super().__init__()
         
         self.activation = activation
-        self.linears = nn.ModuleList([nn.Linear(layers[i], layers[i+1], dtype = torch.double)
+        self.linears = nn.ModuleList([nn.Linear(layers[i], layers[i+1], bias = bias, dtype = torch.double)
                                       for i in range(len(layers)-1)])
+        
+        if datas:
+            for data, lin in zip(datas, self.linears):
+                lin.weight.data = data['weight']
+                if lin.bias:
+                    lin.bias.data = data['bias']
         
     def forward(self, x):
         
-        for i, lin in enumerate(self.linears):
+        for lin in self.linears:
             x = lin(x)
-            if i < len(self.linears)-1:
-                x = self.activation(x)
+            x = self.activation(x)
                 
         return x
 
@@ -32,7 +37,8 @@ class VPINN(nn.Module):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation, u_handle = None, u_ex = None):
+                 layers, activation, datas = None,
+                 u_handle = None, u_ex = None):
         
         super().__init__()
         
@@ -63,8 +69,8 @@ class VPINN(nn.Module):
         if u_handle is not None:
             self.model = u_handle
         else:
-            self.model = MLP(layers, activation)
-        self.u = None
+            self.model = MLP(layers, activation, datas)
+        self.u = self.model(self.x)
         self.u_ex = u_ex
         
         self.losses_interior = []
@@ -82,22 +88,22 @@ class VPINN(nn.Module):
         return self.Integrate(self.source * self.test_functions[k])
     
     def compute_Rk_NL(self, u, k):
-        u_x = td.compute_derivative(u, self.x, retain_graph=True).view(-1)
+        u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
         return self.Integrate(u.view(-1)*u_x*self.test_functions[k])
     
     def compute_Rk1(self, u, k):
-        u_xx = td.compute_laplacian(u, [self.x], retain_graph=True)
+        u_xx = td.compute_laplacian(u, [self.x], retain_graph=True, create_graph=True)
         return -self.Integrate(u_xx * self.test_functions[k])
     
     def compute_Rk2(self, u, k):
-        u_x = td.compute_derivative(u, self.x, retain_graph=True).view(-1)
+        u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
         return self.Integrate(u_x * self.dtest_functions[k])
     
     def compute_Rk3(self, u, k):
         return -self.Integrate(u.view(-1) * self.d2test_functions[k]) + \
                 self.u_right*self.dtest_functions[k][-1] - self.u_left*self.dtest_functions[k][0]
     
-    def compute_Rk(self, u, k, method = 1):
+    def compute_Rk(self):
         raise NotImplementedError
     
     def compute_loss(self, method = 1):
@@ -106,7 +112,8 @@ class VPINN(nn.Module):
         loss_interior = 0
         for k in range(self.num_test_functions):
             Rk = self.compute_Rk(self.u, k, method)
-            loss_interior += (Rk - self.compute_Fk(k))**2
+            Fk = self.compute_Fk(k)
+            loss_interior += (Rk - Fk)**2
         loss_interior /= self.num_test_functions
         self.losses_interior.append(loss_interior.item())
             
@@ -128,11 +135,13 @@ class VPINN_Laplace_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation, u_ex = None):
+                 layers, activation, datas = None,
+                 u_handle = None, u_ex = None):
         
         super().__init__(a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation, u_ex)
+                 layers, activation, datas,
+                 u_handle, u_ex)
 
     def compute_Rk(self, u, k, method = 1):
             
@@ -146,11 +155,13 @@ class VPINN_SteadyBurger_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation, u_ex = None):
+                 layers, activation, datas = None,
+                 u_handle = None, u_ex = None):
         
         super().__init__(a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, boundary_penalty,
-                 layers, activation, u_ex)
+                 layers, activation, datas,
+                 u_handle, u_ex)
 
     def compute_Rk(self, u, k, method = 1):
             
@@ -229,8 +240,8 @@ class PINN_SteadyBurger_Dirichlet(PINN):
     
     def compute_R(self, u):
         
-        u_x = td.compute_derivative(u, self.x, retain_graph=True).view(-1)
-        u_xx = td.compute_laplacian(u, [self.x], retain_graph = True).view(-1)
+        u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
+        u_xx = td.compute_laplacian(u, [self.x], retain_graph = True, create_graph=True).view(-1)
         
         return u.view(-1)*u_x - u_xx
     
