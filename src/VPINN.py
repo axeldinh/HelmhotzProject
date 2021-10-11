@@ -66,19 +66,19 @@ class VPINN(nn.Module):
 
         # Sine functions
         for k in range(1, num_sine_test_functions+1):
-            self.test_functions[k-1] = torch.sin(np.pi*k*self.x.view(-1))
+            self.test_functions[k-1] = torch.sin(np.pi*k*self.x.view(-1)).to(device)
             self.dtest_functions[k-1] = td.compute_derivative(self.test_functions[k-1],
-                                                              self.x, retain_graph = True).view(-1)
-            self.d2test_functions[k-1] = td.compute_laplacian(self.test_functions[k-1], [self.x], retain_graph=True).view(-1)
+                                                              self.x, retain_graph = True).view(-1).to(device)
+            self.d2test_functions[k-1] = td.compute_laplacian(self.test_functions[k-1], [self.x], retain_graph=True).view(-1).to(device)
 
         # Polynomials
         for k in range(1, num_poly_test_functions+1):
             ind = k-1+num_sine_test_functions
-            poly = getPolyTest(k, self.x).view(-1)
+            poly = getPolyTest(k, self.x).view(-1).to(device)
             self.test_functions[ind] = poly
             self.dtest_functions[ind] = td.compute_derivative(self.test_functions[ind],
-                                                              self.x, retain_graph = True).view(-1)
-            self.d2test_functions[ind] = td.compute_laplacian(self.test_functions[ind], [self.x], retain_graph=True).view(-1)
+                                                              self.x, retain_graph = True).view(-1).to(device)
+            self.d2test_functions[ind] = td.compute_laplacian(self.test_functions[ind], [self.x], retain_graph=True).view(-1).to(device)
             
         self.source = source_function(self.x).view(-1).to(device)
         
@@ -86,7 +86,7 @@ class VPINN(nn.Module):
             self.model = u_handle
         else:
             self.model = MLP(layers, activation, True, datas).to(device)
-        self.u = self.model(self.x)
+        self.u = self.model(self.x).to(device)
         self.u_ex = u_ex
         
         self.losses_interior = []
