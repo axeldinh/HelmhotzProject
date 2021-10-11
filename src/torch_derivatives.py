@@ -35,7 +35,7 @@ def compute_derivative(u, x, retain_graph = False, create_graph = False, allow_u
         if u.size(1) > 1:
             raise ValueError(f"More than one value is associated to each point, u should either be a 1D Tensor or a flat 2D Tensor,  u has size {u.size()}")
 
-    grad = torch.ones(u.size())
+    grad = torch.ones(u.size()).to(x.device)
     u_x = torch.autograd.grad([u], inputs = x, grad_outputs=[grad],
                               retain_graph=retain_graph, create_graph=create_graph, allow_unused=allow_unused)[0]
     
