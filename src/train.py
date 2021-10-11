@@ -1,7 +1,7 @@
 from tqdm import tqdm
 import torch
 
-def train(model, optimizer, num_iter, method = 1):
+def train(model, optimizer, num_iter, method = 1, tol = 1e-10):
     t = tqdm(range(num_iter))
     last_loss = 0
     for iter_ in t:
@@ -16,7 +16,7 @@ def train(model, optimizer, num_iter, method = 1):
         if optimizer is not None:
             optimizer.step()
         t.set_description("Loss Interior = {:e}, Loss Boundary = {:e}".format(loss_interior.item(), loss_boundary.item()))
-        if torch.abs(last_loss - loss) < 1e-10:
+        if torch.abs(last_loss - loss) < tol:
             break
         last_loss = loss
     print("Training Over")
