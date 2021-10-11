@@ -116,7 +116,7 @@ class VPINN(nn.Module):
         elif degree_derivative==2:
           integrals = self.weights * f * self.d2test_functions
 
-        return integrals.sum(dim = 1)
+        return 0.5 * integrals.sum(dim = 1) * (self.b - self.a)
     
     def compute_F(self):
         '''
