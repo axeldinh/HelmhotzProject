@@ -167,12 +167,12 @@ class VPINN_Laplace_Dirichlet(VPINN):
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, num_poly_test_functions,
                  boundary_penalty, layers, activation, datas = None,
-                 u_handle = None, u_ex = None):
+                 u_handle = None, u_ex = None, device = 'cpu'):
 
         super().__init__(a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, num_poly_test_functions,
                  boundary_penalty, layers, activation, datas,
-                 u_handle, u_ex)
+                 u_handle, u_ex, device = device)
 
     def compute_Rk(self, u, k, method = 1):
             
@@ -187,12 +187,12 @@ class VPINN_SteadyBurger_Dirichlet(VPINN):
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, num_poly_test_functions,
                  boundary_penalty, layers, activation, datas = None,
-                 u_handle = None, u_ex = None):
+                 u_handle = None, u_ex = None, device = 'cpu'):
         
         super().__init__(a, b, u_left, u_right, source_function,
                  num_points, num_test_functions, num_poly_test_functions,
                  boundary_penalty, layers, activation, datas,
-                 u_handle, u_ex)
+                 u_handle, u_ex, device = device)
 
     def compute_Rk(self, u, k, method = 1):
             
