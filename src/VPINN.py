@@ -1,3 +1,4 @@
+from matplotlib import markers
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -6,6 +7,8 @@ import numpy as np
 import torch_derivatives as td
 import quadrature_rules as qr
 from utils import *
+
+import copy
 
 class MLP(nn.Module):
     
@@ -94,8 +97,10 @@ class VPINN(nn.Module):
         else:
             self.model = MLP(layers, activation, True, datas).to(device)
         self.u = self.model(self.x).to(device)
+        self.best_model = copy.deepcopy(self.model)
         self.u_ex = u_ex
-        
+        self.error = None
+
         self.losses_interior = []
         self.losses_boundary = []
 
@@ -177,9 +182,35 @@ class VPINN(nn.Module):
         if self.u_ex:
             plt.plot(self.x.cpu().detach().numpy(), self.u_ex(self.x).cpu().detach().numpy(), label="Exact", c = 'r')
         plt.scatter(self.x.cpu().detach().numpy(), self.u.cpu().detach().numpy(), label="Approx", c = 'k', marker = "*", s = 20)
+        plt.xlabel('x')
+        plt.ylabel('U(x)')
         plt.grid()
         plt.legend()
-        plt.show()
+
+    def compute_error(self):
+
+        if self.u_ex is None:
+            print("The exact solution has not been provided, please define it with model.u_ex = 'function handle'.")
+            return
+        
+        self.u = self.model(self.x)
+        self.error = torch.abs(self.u.view(-1) - self.u_ex(self.x).view(-1))
+
+        return self.error
+
+    def plot_error(self):
+        
+        self.compute_error()
+
+        x = self.x.cpu().detach().numpy()
+        error = self.error.cpu().detach().numpy()
+        plt.plot(x, error, ls = '--', marker = "*", markersize = 5, label = "Error", c = 'k')
+        plt.legend()
+        plt.xlabel('x')
+        plt.ylabel('Error')
+        plt.grid()
+        
+
 
 class VPINN_Laplace_Dirichlet(VPINN):
     
