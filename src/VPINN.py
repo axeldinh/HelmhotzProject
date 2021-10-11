@@ -17,11 +17,18 @@ class MLP(nn.Module):
         self.linears = nn.ModuleList([nn.Linear(layers[i], layers[i+1], bias = bias, dtype = torch.double)
                                       for i in range(len(layers)-1)])
         
-        if datas:
+        if datas is not None:
             for data, lin in zip(datas, self.linears):
                 lin.weight.data = data['weight']
                 if lin.bias is not None:
                     lin.bias.data = data['bias']
+        else:
+            for lin in self.linears:
+                for n, p in lin.named_parameters():
+                    if 'weight' in n:
+                      nn.init.orthogonal_(p)
+                    elif 'bias' in n:
+                      nn.init.zeros_(p)
         
     def forward(self, x):
         
