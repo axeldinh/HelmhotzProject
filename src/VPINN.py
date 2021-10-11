@@ -40,7 +40,7 @@ class VPINN(nn.Module):
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_sine_test_functions, num_poly_test_functions,
                  boundary_penalty, layers, activation, datas = None,
-                 u_handle = None, u_ex = None):
+                 u_handle = None, u_ex = None, device = 'cpu'):
         
         super().__init__()
         
@@ -55,8 +55,8 @@ class VPINN(nn.Module):
         
         # Set the quadrature points and weights
         self.x, self.weights = qr.GaussLobattoJacobiQuadrature1D(num_points, a, b)
-        self.x = torch.tensor(self.x, dtype = torch.double).view(-1,1)
-        self.weights = torch.Tensor(self.weights).double()
+        self.x = torch.tensor(self.x, dtype = torch.double).view(-1,1).t(device)
+        self.weights = torch.Tensor(self.weights).double().to(device)
         self.x.requires_grad = True
         
         # Compute the test function with their derivatives
@@ -80,12 +80,12 @@ class VPINN(nn.Module):
                                                               self.x, retain_graph = True).view(-1)
             self.d2test_functions[ind] = td.compute_laplacian(self.test_functions[ind], [self.x], retain_graph=True).view(-1)
             
-        self.source = source_function(self.x).view(-1)
+        self.source = source_function(self.x).view(-1).to(device)
         
         if u_handle is not None:
             self.model = u_handle
         else:
-            self.model = MLP(layers, activation, True, datas)
+            self.model = MLP(layers, activation, True, datas).to(device)
         self.u = self.model(self.x)
         self.u_ex = u_ex
         
