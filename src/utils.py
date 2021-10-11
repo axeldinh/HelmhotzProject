@@ -30,7 +30,7 @@ def getPolyTest(k, x):
     poly2 = jacobi(k+1, 0, 0)
     poly1 = list(poly1)[::-1]
     poly2 = list(poly2)[::-1]
-    poly = torch.zeros(x.size(), dtype = torch.double, requires_grad=True)
+    poly = torch.zeros(x.size(), dtype = torch.double, requires_grad=True).to(x.device)
 
     for i in range(len(poly2)):
         poly = poly + poly2[i]*x**i
