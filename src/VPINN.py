@@ -55,7 +55,7 @@ class VPINN(nn.Module):
         
         # Set the quadrature points and weights
         self.x, self.weights = qr.GaussLobattoJacobiQuadrature1D(num_points, a, b)
-        self.x = torch.tensor(self.x, dtype = torch.double).view(-1,1).t(device)
+        self.x = torch.tensor(self.x, dtype = torch.double).view(-1,1).to(device)
         self.weights = torch.Tensor(self.weights).double().to(device)
         self.x.requires_grad = True
         
