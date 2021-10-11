@@ -49,7 +49,7 @@ class VPINN(nn.Module):
         self.num_sine_test_functions = num_sine_test_functions
         self.num_poly_test_functions = num_poly_test_functions
         self.num_test_functions = num_sine_test_functions+num_poly_test_functions
-        self.u_left, self.u_right = u_left, u_right
+        self.u_left, self.u_right = u_left.to(device), u_right.to(device)
         self.boundary_penalty = boundary_penalty
         self.source_function = source_function
         
@@ -60,25 +60,25 @@ class VPINN(nn.Module):
         self.x.requires_grad = True
         
         # Compute the test function with their derivatives
-        self.test_functions = torch.zeros((self.num_test_functions, num_points))
-        self.dtest_functions = torch.zeros((self.num_test_functions, num_points))
-        self.d2test_functions = torch.zeros((self.num_test_functions, num_points))
+        self.test_functions = torch.zeros((self.num_test_functions, num_points)).to(device)
+        self.dtest_functions = torch.zeros((self.num_test_functions, num_points)).to(device)
+        self.d2test_functions = torch.zeros((self.num_test_functions, num_points)).to(device)
 
         # Sine functions
         for k in range(1, num_sine_test_functions+1):
             self.test_functions[k-1] = torch.sin(np.pi*k*self.x.view(-1)).to(device)
             self.dtest_functions[k-1] = td.compute_derivative(self.test_functions[k-1],
-                                                              self.x, retain_graph = True).view(-1).to(device)
-            self.d2test_functions[k-1] = td.compute_laplacian(self.test_functions[k-1], [self.x], retain_graph=True).view(-1).to(device)
+                                                              self.x, retain_graph = True).view(-1)
+            self.d2test_functions[k-1] = td.compute_laplacian(self.test_functions[k-1], [self.x], retain_graph=True).view(-1)
 
         # Polynomials
         for k in range(1, num_poly_test_functions+1):
             ind = k-1+num_sine_test_functions
-            poly = getPolyTest(k, self.x).view(-1).to(device)
+            poly = getPolyTest(k, self.x).view(-1)
             self.test_functions[ind] = poly
             self.dtest_functions[ind] = td.compute_derivative(self.test_functions[ind],
-                                                              self.x, retain_graph = True).view(-1).to(device)
-            self.d2test_functions[ind] = td.compute_laplacian(self.test_functions[ind], [self.x], retain_graph=True).view(-1).to(device)
+                                                              self.x, retain_graph = True).view(-1)
+            self.d2test_functions[ind] = td.compute_laplacian(self.test_functions[ind], [self.x], retain_graph=True).view(-1)
             
         self.source = source_function(self.x).view(-1).to(device)
         
@@ -156,8 +156,8 @@ class VPINN(nn.Module):
 
     def plot(self):
         if self.u_ex:
-            plt.plot(self.x.detach().numpy(), self.u_ex(self.x).detach().numpy(), label="Exact", c = 'r')
-        plt.scatter(self.x.detach().numpy(), self.u.detach().numpy(), label="Approx", c = 'k', marker = "*", s = 20)
+            plt.plot(self.x.cpu().detach().numpy(), self.u_ex(self.x).cpu().detach().numpy(), label="Exact", c = 'r')
+        plt.scatter(self.x.cpu().detach().numpy(), self.u.cpu().detach().numpy(), label="Approx", c = 'k', marker = "*", s = 20)
         plt.grid()
         plt.legend()
         plt.show()
