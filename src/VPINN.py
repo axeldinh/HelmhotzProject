@@ -109,6 +109,8 @@ class VPINN(nn.Module):
         Computes the integral of f*test_function for all test functions,
         degree_derivative specifies which derivative of test_function is needed
         '''
+        if (len(f.size())) > 1:
+            raise ValueError(f"the function should be with 1 dimension got {f.size()}")
         if degree_derivative==0:
           integrals = self.weights * f * self.test_functions
         elif degree_derivative==1:
