@@ -101,24 +101,38 @@ class VPINN(nn.Module):
         return qr.Integrate1D(f, self.a, self.b, self.x, self.weights)
         
     def compute_Fk(self, k):
+        '''
+        Computes integral(f * vk)
+        '''
         return self.Integrate(self.source * self.test_functions[k])
     
     def compute_Rk_NL(self, u, k):
+        '''
+        Computes integral(u * du/dx * vk)
+        '''
         u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
         return self.Integrate(u.view(-1)*u_x*self.test_functions[k])
     
     def compute_Rk1(self, u, k):
+        '''
+        Computes integral(d^2u/dx^2 * vk)
+        '''
         u_xx = td.compute_laplacian(u, [self.x], retain_graph=True, create_graph=True).view(-1)
         return -self.Integrate(u_xx * self.test_functions[k])
     
     def compute_Rk2(self, u, k):
+        '''
+        Computes integral(du/dx * dvk/dx)
+        '''
         u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
         return self.Integrate(u_x * self.dtest_functions[k])
     
     def compute_Rk3(self, u, k):
+        '''
+        Computes integral(u * d^2vk/dx^2) + Integral_boundary(u * dvk/dx)
+        '''
         return -self.Integrate(u.view(-1) * self.d2test_functions[k]) + \
-                u[-1]*self.dtest_functions[k][-1] - u[0]*self.dtest_functions[k][0]
-                #self.u_right*self.dtest_functions[k][-1] - self.u_left*self.dtest_functions[k][0]
+                self.u_right*self.dtest_functions[k][-1] - self.u_left*self.dtest_functions[k][0]
     
     def compute_Rk(self):
         raise NotImplementedError
