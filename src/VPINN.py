@@ -26,7 +26,7 @@ class MLP(nn.Module):
             for lin in self.linears:
                 for n, p in lin.named_parameters():
                     if 'weight' in n:
-                      nn.init.orthogonal_(p)
+                      nn.init.xavier_normal_(p)
                     elif 'bias' in n:
                       nn.init.zeros_(p)
         
