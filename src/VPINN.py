@@ -96,56 +96,66 @@ class VPINN(nn.Module):
             self.grad_parameters = {}
             for n, _ in self.model.named_parameters():
                 self.grad_parameters[n] = []
-        
-    def Integrate(self, f):
-        return qr.Integrate1D(f, self.a, self.b, self.x, self.weights)
-        
-    def compute_Fk(self, k):
+
+    def IntegrateOnTest(self, f, degree_derivative=0):
         '''
-        Computes integral(f * vk)
+        Computes the integral of f*test_function for all test functions,
+        degree_derivative specifies which derivative of test_function is needed
         '''
-        return self.Integrate(self.source * self.test_functions[k])
+        if degree_derivative==0:
+          integrals = self.weights * f * self.test_functions
+        elif degree_derivative==1:
+          integrals = self.weights * f * self.dtest_functions
+        elif degree_derivative==2:
+          integrals = self.weights * f * self.d2test_functions
+
+        return integrals.sum(dim = 1)
     
-    def compute_Rk_NL(self, u, k):
+    def compute_F(self):
         '''
-        Computes integral(u * du/dx * vk)
+        Computes integral(f * vk) for all k
+        '''
+        return self.IntegrateOnTest(self.source)
+    
+    def compute_R_NL(self, u):
+        '''
+        Computes integral(u * du/dx * vk) for all k
         '''
         u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
-        return self.Integrate(u.view(-1)*u_x*self.test_functions[k])
-    
-    def compute_Rk1(self, u, k):
+        return self.IntegrateOnTest(u.view(-1)*u_x)
+
+    def compute_R1(self, u):
         '''
-        Computes integral(d^2u/dx^2 * vk)
+        Computes -integral(d^2u/dx^2 * vk) for all k
         '''
         u_xx = td.compute_laplacian(u, [self.x], retain_graph=True, create_graph=True).view(-1)
-        return -self.Integrate(u_xx * self.test_functions[k])
-    
-    def compute_Rk2(self, u, k):
+        return self.IntegrateOnTest(-u_xx)
+
+    def compute_R2(self, u):
         '''
-        Computes integral(du/dx * dvk/dx)
+        Computes integral(du/dx * dvk/dx) for all k
         '''
         u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
-        return self.Integrate(u_x * self.dtest_functions[k])
-    
-    def compute_Rk3(self, u, k):
+        return self.IntegrateOnTest(u_x, 1)
+
+    def compute_R3(self, u, k):
         '''
-        Computes integral(u * d^2vk/dx^2) + Integral_boundary(u * dvk/dx)
+        Computes integral(u * d^2vk/dx^2) + Integral_boundary(u * dvk/dx) for all k
         '''
-        return -self.Integrate(u.view(-1) * self.d2test_functions[k]) + \
-                self.u_right*self.dtest_functions[k][-1] - self.u_left*self.dtest_functions[k][0]
+        integral = -self.IntegrateOnTest(u.view(-1), 2)
+        BC = self.u_right * self.dtest_functions[:,-1] -self.u_left*self.dtest_functions[:,0]
+        return integral + BC
     
-    def compute_Rk(self):
+    def compute_R(self):
         raise NotImplementedError
     
     def compute_loss(self, method = 1):
         
         self.u = self.model(self.x)
-        loss_interior = 0
-        for k in range(self.num_test_functions):
-            Rk = self.compute_Rk(self.u, k, method)
-            Fk = self.compute_Fk(k)
-            loss_interior += (Rk - Fk)**2
-        loss_interior /= self.num_test_functions
+
+        R = self.compute_R(self.u, method = method)
+        F = self.compute_F()
+        loss_interior = torch.mean((R-F)**2)
         self.losses_interior.append(loss_interior.item())
             
         loss_boundary = (self.u[0] - self.u_left)**2 + (self.u[-1] - self.u_right)**2
@@ -181,6 +191,15 @@ class VPINN_Laplace_Dirichlet(VPINN):
         elif method == 3: Rk = self.compute_Rk3(u, k)
             
         return Rk
+    
+    def compute_R(self, u, method = 1):
+      
+        if method == 1: R = self.compute_R1(u)
+        elif method == 2: R = self.compute_R2(u)
+        elif method == 3: R = self.compute_R3(u)
+
+        return R
+
 
 class VPINN_SteadyBurger_Dirichlet(VPINN):
     
@@ -203,6 +222,16 @@ class VPINN_SteadyBurger_Dirichlet(VPINN):
         Rk += self.compute_Rk_NL(u, k)
         
         return Rk
+    
+    def compute_R(self, u, method = 1):
+      
+        if method == 1: R = self.compute_R1(u)
+        elif method == 2: R = self.compute_R2(u)
+        elif method == 3: R = self.compute_R3(u)
+
+        R += self.compute_R_NL(u)
+
+        return R
 
 
 # PINNs
