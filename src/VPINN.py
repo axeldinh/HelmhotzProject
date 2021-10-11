@@ -5,6 +5,7 @@ import numpy as np
 
 import torch_derivatives as td
 import quadrature_rules as qr
+from utils import *
 
 class MLP(nn.Module):
     
@@ -19,14 +20,15 @@ class MLP(nn.Module):
         if datas:
             for data, lin in zip(datas, self.linears):
                 lin.weight.data = data['weight']
-                if lin.bias:
+                if lin.bias is not None:
                     lin.bias.data = data['bias']
         
     def forward(self, x):
         
-        for lin in self.linears:
+        for i, lin in enumerate(self.linears):
             x = lin(x)
-            x = self.activation(x)
+            if i < len(self.linears)-1:
+                x = self.activation(x)
                 
         return x
 
@@ -36,14 +38,17 @@ class MLP(nn.Module):
 class VPINN(nn.Module):
     
     def __init__(self, a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, boundary_penalty,
-                 layers, activation, datas = None,
+                 num_points, num_sine_test_functions, num_poly_test_functions,
+                 boundary_penalty, layers, activation, datas = None,
                  u_handle = None, u_ex = None):
         
         super().__init__()
         
         self.a, self.b = a, b
-        self.num_points, self.num_test_functions = num_points, num_test_functions
+        self.num_points = num_points
+        self.num_sine_test_functions = num_sine_test_functions
+        self.num_poly_test_functions = num_poly_test_functions
+        self.num_test_functions = num_sine_test_functions+num_poly_test_functions
         self.u_left, self.u_right = u_left, u_right
         self.boundary_penalty = boundary_penalty
         self.source_function = source_function
@@ -55,21 +60,32 @@ class VPINN(nn.Module):
         self.x.requires_grad = True
         
         # Compute the test function with their derivatives
-        self.test_functions = torch.zeros((num_test_functions, num_points))
-        self.dtest_functions = torch.zeros((num_test_functions, num_points))
-        self.d2test_functions = torch.zeros((num_test_functions, num_points))
-        for k in range(1, num_test_functions+1):
+        self.test_functions = torch.zeros((self.num_test_functions, num_points))
+        self.dtest_functions = torch.zeros((self.num_test_functions, num_points))
+        self.d2test_functions = torch.zeros((self.num_test_functions, num_points))
+
+        # Sine functions
+        for k in range(1, num_sine_test_functions+1):
             self.test_functions[k-1] = torch.sin(np.pi*k*self.x.view(-1))
             self.dtest_functions[k-1] = td.compute_derivative(self.test_functions[k-1],
                                                               self.x, retain_graph = True).view(-1)
             self.d2test_functions[k-1] = td.compute_laplacian(self.test_functions[k-1], [self.x], retain_graph=True).view(-1)
+
+        # Polynomials
+        for k in range(1, num_poly_test_functions+1):
+            ind = k-1+num_sine_test_functions
+            poly = getPolyTest(k, self.x).view(-1)
+            self.test_functions[ind] = poly
+            self.dtest_functions[ind] = td.compute_derivative(self.test_functions[ind],
+                                                              self.x, retain_graph = True).view(-1)
+            self.d2test_functions[ind] = td.compute_laplacian(self.test_functions[ind], [self.x], retain_graph=True).view(-1)
             
         self.source = source_function(self.x).view(-1)
         
         if u_handle is not None:
             self.model = u_handle
         else:
-            self.model = MLP(layers, activation, datas)
+            self.model = MLP(layers, activation, True, datas)
         self.u = self.model(self.x)
         self.u_ex = u_ex
         
@@ -92,7 +108,7 @@ class VPINN(nn.Module):
         return self.Integrate(u.view(-1)*u_x*self.test_functions[k])
     
     def compute_Rk1(self, u, k):
-        u_xx = td.compute_laplacian(u, [self.x], retain_graph=True, create_graph=True)
+        u_xx = td.compute_laplacian(u, [self.x], retain_graph=True, create_graph=True).view(-1)
         return -self.Integrate(u_xx * self.test_functions[k])
     
     def compute_Rk2(self, u, k):
@@ -101,7 +117,8 @@ class VPINN(nn.Module):
     
     def compute_Rk3(self, u, k):
         return -self.Integrate(u.view(-1) * self.d2test_functions[k]) + \
-                self.u_right*self.dtest_functions[k][-1] - self.u_left*self.dtest_functions[k][0]
+                u[-1]*self.dtest_functions[k][-1] - u[0]*self.dtest_functions[k][0]
+                #self.u_right*self.dtest_functions[k][-1] - self.u_left*self.dtest_functions[k][0]
     
     def compute_Rk(self):
         raise NotImplementedError
@@ -134,13 +151,13 @@ class VPINN(nn.Module):
 class VPINN_Laplace_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, boundary_penalty,
-                 layers, activation, datas = None,
+                 num_points, num_test_functions, num_poly_test_functions,
+                 boundary_penalty, layers, activation, datas = None,
                  u_handle = None, u_ex = None):
-        
+
         super().__init__(a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, boundary_penalty,
-                 layers, activation, datas,
+                 num_points, num_test_functions, num_poly_test_functions,
+                 boundary_penalty, layers, activation, datas,
                  u_handle, u_ex)
 
     def compute_Rk(self, u, k, method = 1):
@@ -154,13 +171,13 @@ class VPINN_Laplace_Dirichlet(VPINN):
 class VPINN_SteadyBurger_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, boundary_penalty,
-                 layers, activation, datas = None,
+                 num_points, num_test_functions, num_poly_test_functions,
+                 boundary_penalty, layers, activation, datas = None,
                  u_handle = None, u_ex = None):
         
         super().__init__(a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, boundary_penalty,
-                 layers, activation, datas,
+                 num_points, num_test_functions, num_poly_test_functions,
+                 boundary_penalty, layers, activation, datas,
                  u_handle, u_ex)
 
     def compute_Rk(self, u, k, method = 1):

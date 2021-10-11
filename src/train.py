@@ -15,7 +15,7 @@ def train(model, optimizer, num_iter, method = 1):
                 model.grad_parameters[n].append(p.grad.clone())
         if optimizer is not None:
             optimizer.step()
-        t.set_description("Loss Interior = {:.7f}, Loss Boundary = {:.7f}".format(loss_interior.item(), loss_boundary.item()))
+        t.set_description("Loss Interior = {:e}, Loss Boundary = {:e}".format(loss_interior.item(), loss_boundary.item()))
         if torch.abs(last_loss - loss) < 1e-10:
             break
         last_loss = loss

@@ -1,3 +1,8 @@
+from scipy.special import jacobi
+import numpy as np
+import torch
+from torch._C import Value
+
 def getBack(var_grad_fn):
     '''
     Tracks the autograd tree.
@@ -15,3 +20,21 @@ def getBack(var_grad_fn):
                 print()
             except AttributeError as e:
                 getBack(n[0])
+
+def getPolyTest(k, x):
+
+    if type(x).__name__ != 'Tensor':
+        raise ValueError(f"x should be a Tensor, currently is of type {type(x)}")
+
+    poly1 = jacobi(k-1, 0, 0)
+    poly2 = jacobi(k+1, 0, 0)
+    poly1 = list(poly1)[::-1]
+    poly2 = list(poly2)[::-1]
+    poly = torch.zeros(x.size(), dtype = torch.double, requires_grad=True)
+
+    for i in range(len(poly2)):
+        poly = poly + poly2[i]*x**i
+        if i < len(poly1):
+            poly = poly - poly1[i]*x**i
+
+    return poly
