@@ -173,6 +173,7 @@ class VPINN(nn.Module):
         x = self.x.cpu().detach().numpy()
         error = self.error.cpu().detach().numpy()
         plt.plot(x, error, ls = '--', marker = "*", markersize = 5, label = "Error", c = 'k')
+        plt.yscale('log')
         plt.legend()
         plt.xlabel('x')
         plt.ylabel('Error')
