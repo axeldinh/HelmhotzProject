@@ -8,6 +8,9 @@ import torch
 
 def GaussLobattoLegendreQuadrature1D(num_points, a, b):
     '''
+    PROBLEM: if num_points is too high the quadrature points have an imaginary part.
+    SOLUTION: Use the recursive definition (GaussLobattoJacobiWeights)
+
     Returns the num_points points and weights of the Gauss-Lobatto quadrature over [a,b].
     This method is accurate for polynomials up to degree 2num_points-3
     '''
@@ -100,11 +103,11 @@ def GaussLobattoJacobiQuadrature2D(num_points_per_dim, a, b, c, d,
 
 def Integrate1D(f, a, b, X = None, weights = None):
     '''
-    Integrates a function f over [a, b] using the given roots and weights
+    Integrates a function f over [a, b] using the given roots and weights.
     Parameters:
         f (iterable or function handle): if f is an array of the same size as weights,
                                          the integral is directly computed using summation.
-                                         Otherwise f is evaluated on thee roots before hand.
+                                         Otherwise f is evaluated on the roots before hand.
         a (float)                      : start of the interval
         b (float)                      : end of the interval
         roots (iterable)               : where the function needds to be evaluated (as accorded to the quadrature rule)

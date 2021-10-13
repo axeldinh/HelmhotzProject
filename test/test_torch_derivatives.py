@@ -130,7 +130,6 @@ class Test_compute_laplacian(unittest.TestCase):
         expected = torch.zeros((4,)).view(u_lapl.size())
         self.assertEqual(torch.all(torch.eq(u_lapl, expected)), True, msg=f"\n\nu_lapl should be \n{expected} \nbut got\n {u_lapl}")
 
-
 if __name__=="__main__":
 
     unittest.main()
