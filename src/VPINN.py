@@ -9,38 +9,6 @@ from utils import *
 
 import copy
 
-class MLP(nn.Module):
-    
-    def __init__(self, layers, activation, bias = True, datas = None):
-        
-        super().__init__()
-        
-        self.activation = activation
-        self.linears = nn.ModuleList([nn.Linear(layers[i], layers[i+1], bias = bias, dtype = torch.double)
-                                      for i in range(len(layers)-1)])
-        
-        if datas is not None:
-            for data, lin in zip(datas, self.linears):
-                lin.weight.data = data['weight']
-                if lin.bias is not None:
-                    lin.bias.data = data['bias']
-        else:
-            for lin in self.linears:
-                for n, p in lin.named_parameters():
-                    if 'weight' in n:
-                      nn.init.xavier_normal_(p)
-                    elif 'bias' in n:
-                      nn.init.zeros_(p)
-        
-    def forward(self, x):
-        
-        for i, lin in enumerate(self.linears):
-            x = lin(x)
-            if i < len(self.linears)-1:
-                x = self.activation(x)
-                
-        return x
-
 # VPINNs
 ##################################################
 
@@ -48,8 +16,7 @@ class VPINN(nn.Module):
     
     def __init__(self, a, b, u_left, u_right, source_function,
                  num_points, num_sine_test_functions, num_poly_test_functions,
-                 boundary_penalty, layers, activation, datas = None,
-                 u_handle = None, u_ex = None, device = 'cpu'):
+                 boundary_penalty, u_approx, u_ex = None, device = 'cpu'):
         
         super().__init__()
         
@@ -91,12 +58,14 @@ class VPINN(nn.Module):
             
         self.source = source_function(self.x).view(-1).to(device)
         
-        if u_handle is not None:
-            self.model = u_handle
-        else:
-            self.model = MLP(layers, activation, True, datas).to(device)
+        if type(u_approx).__name__ == 'function':
+            self.model = u_approx
+        elif u_approx.__class__.__base__.__name__ == 'Module':
+            self.model = u_approx
+
         self.u = self.model(self.x).to(device)
-        self.best_model = copy.deepcopy(self.model)
+        self.best_model = copy.deepcopy(self.model) # The first model is our best model
+
         self.u_ex = u_ex
         self.error = None
 
@@ -212,14 +181,12 @@ class VPINN(nn.Module):
 class VPINN_Laplace_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, num_poly_test_functions,
-                 boundary_penalty, layers, activation, datas = None,
-                 u_handle = None, u_ex = None, device = 'cpu'):
+                 num_points, num_sine_test_functions, num_poly_test_functions,
+                 boundary_penalty, u_approx, u_ex = None, device = 'cpu'):
 
         super().__init__(a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, num_poly_test_functions,
-                 boundary_penalty, layers, activation, datas,
-                 u_handle, u_ex, device = device)
+                 num_points, num_sine_test_functions, num_poly_test_functions,
+                 boundary_penalty, u_approx, u_ex = u_ex, device = device)
 
     def compute_Rk(self, u, k, method = 1):
             
@@ -240,14 +207,12 @@ class VPINN_Laplace_Dirichlet(VPINN):
 class VPINN_SteadyBurger_Dirichlet(VPINN):
     
     def __init__(self, a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, num_poly_test_functions,
-                 boundary_penalty, layers, activation, datas = None,
-                 u_handle = None, u_ex = None, device = 'cpu'):
+                 num_points, num_sine_test_functions, num_poly_test_functions,
+                 boundary_penalty, u_approx, u_ex = None, device = 'cpu'):
         
         super().__init__(a, b, u_left, u_right, source_function,
-                 num_points, num_test_functions, num_poly_test_functions,
-                 boundary_penalty, layers, activation, datas,
-                 u_handle, u_ex, device = device)
+                 num_points, num_sine_test_functions, num_poly_test_functions,
+                 boundary_penalty, u_approx, u_ex = u_ex, device = device)
 
     def compute_Rk(self, u, k, method = 1):
             
