@@ -9,6 +9,39 @@ from utils import *
 
 import copy
 
+# Small Module to use with VPINN
+class MLP(nn.Module):
+    
+    def __init__(self, layers, activation, bias = True, datas = None):
+        
+        super().__init__()
+        
+        self.activation = activation
+        self.linears = nn.ModuleList([nn.Linear(layers[i], layers[i+1], bias = bias, dtype = torch.double)
+                                      for i in range(len(layers)-1)])
+        
+        if datas is not None:
+            for data, lin in zip(datas, self.linears):
+                lin.weight.data = data['weight']
+                if lin.bias is not None:
+                    lin.bias.data = data['bias']
+        else:
+            for lin in self.linears:
+                for n, p in lin.named_parameters():
+                    if 'weight' in n:
+                      nn.init.xavier_normal_(p)
+                    elif 'bias' in n:
+                      nn.init.zeros_(p)
+        
+    def forward(self, x):
+        
+        for i, lin in enumerate(self.linears):
+            x = lin(x)
+            if i < len(self.linears)-1:
+                x = self.activation(x)
+                
+        return x
+
 # VPINNs
 ##################################################
 
