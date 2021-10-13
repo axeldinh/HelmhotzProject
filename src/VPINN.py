@@ -151,7 +151,7 @@ class VPINN(nn.Module):
         u_x = td.compute_derivative(u, self.x, retain_graph=True, create_graph=True).view(-1)
         return self.IntegrateOnTest(u_x, 1)
 
-    def compute_R3(self, u, k):
+    def compute_R3(self, u):
         '''
         Computes integral(u * d^2vk/dx^2) + Integral_boundary(u * dvk/dx) for all k
         '''
@@ -236,7 +236,6 @@ class VPINN_Laplace_Dirichlet(VPINN):
         elif method == 3: R = self.compute_R3(u)
 
         return R
-
 
 class VPINN_SteadyBurger_Dirichlet(VPINN):
     
