@@ -158,7 +158,7 @@ class VPINN(nn.Module):
         Computes integral(u * d^2vk/dx^2) + Integral_boundary(u * dvk/dx) for all k
         '''
         integral = -self.IntegrateOnTest(u.view(-1), 2)
-        BC = self.u_right * self.dtest_functions[:,-1] -self.u_left*self.dtest_functions[:,0]
+        BC = self.u_right * self.dtest_functions[:,-1] - self.u_left*self.dtest_functions[:,0]
         return integral + BC
     
     def compute_R(self):

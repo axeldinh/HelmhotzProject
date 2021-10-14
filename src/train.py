@@ -11,7 +11,7 @@ def train(model, optimizer, num_iter, method = 1, tol = 1e-10, save_gradients = 
     t = tqdm(range(num_iter))
     last_loss = 0
     best_loss = np.inf
-
+    
     for iter_ in t:
         if optimizer is not None:
             optimizer.zero_grad()
